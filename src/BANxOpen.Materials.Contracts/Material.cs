@@ -1,0 +1,12 @@
+
+namespace BANxOpen.Materials.Contracts;
+
+public sealed record Material(
+    MaterialId Id,
+    MaterialLibraryId LibraryId,
+    string Name,
+    MaterialCategory Category,
+    IReadOnlyList<MaterialPropertyValue> Properties,
+    string? Description = null,
+    (byte R, byte G, byte B)? AppearanceColor = null,
+    string? ImagePath = null);

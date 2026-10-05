@@ -1,0 +1,10 @@
+using BANxOpen.Materials.Contracts;
+
+namespace BANxOpen.Materials.Core.Assignment;
+
+/// <summary>The pure "what would happen" result of running gate rules for one Apply request, before any
+/// user confirmation has been collected and before any side effects have been computed.</summary>
+public sealed record AssignmentPlan(
+    string PlanId,
+    MaterialId RequestedMaterialId,
+    IReadOnlyList<BodyAssignmentEvaluation> BodyEvaluations);

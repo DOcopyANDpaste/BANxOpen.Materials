@@ -1,0 +1,17 @@
+using BANxOpen.Materials.Contracts;
+using BANxOpen.Foundation.Contracts.Bodies;
+
+namespace BANxOpen.Materials.Core.Assignment;
+
+/// <summary>Everything a rule needs to evaluate one (body, requested material) pair.
+/// <see cref="AllTargetBodiesInBatch"/> gives rules visibility into the whole Apply batch for
+/// cross-body reasoning, even though every decision is still emitted per-body.</summary>
+public sealed record MaterialAssignmentRuleContext(
+    Material RequestedMaterial,
+    BodyInfo TargetBody,
+    BodyMaterialAssignment? CurrentAssignment,
+    IReadOnlyList<BodyInfo> AllTargetBodiesInBatch)
+{
+    /// <summary>See <see cref="MaterialAssignmentPlanningInput.RequestedVariant"/>.</summary>
+    public string? RequestedVariant { get; init; }
+}
