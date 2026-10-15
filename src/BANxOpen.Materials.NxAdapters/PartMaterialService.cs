@@ -124,7 +124,7 @@ public sealed class PartMaterialService : IPartMaterialService
                 continue;
             }
 
-            _context.Log.Info($"TRACE Body '{assignment.BodyId}' resolved (JournalIdentifier='{body.JournalIdentifier}') for material '{assignment.MaterialId}'.");
+            _context.Log.Debug($"Body '{assignment.BodyId}' resolved (JournalIdentifier='{body.JournalIdentifier}') for material '{assignment.MaterialId}'.");
 
             var resolved = ResolveMaterial(assignment.MaterialId);
             if (resolved is null)
@@ -164,7 +164,7 @@ public sealed class PartMaterialService : IPartMaterialService
                 continue;
             }
 
-            _context.Log.Info($"TRACE Body '{assignment.BodyId}' (JournalIdentifier='{body.JournalIdentifier}'): physical material '{materialName}' written; {assignment.SideEffects.Count} side-effect(s) queued.");
+            _context.Log.Debug($"Body '{assignment.BodyId}' (JournalIdentifier='{body.JournalIdentifier}'): physical material '{materialName}' written; {assignment.SideEffects.Count} side-effect(s) queued.");
 
             foreach (var instruction in assignment.SideEffects)
             {
@@ -185,7 +185,7 @@ public sealed class PartMaterialService : IPartMaterialService
                 }
                 else
                 {
-                    _context.Log.Info($"TRACE Side effect '{instruction.InstructionType}' succeeded for body '{assignment.BodyId}'.");
+                    _context.Log.Debug($"Side effect '{instruction.InstructionType}' succeeded for body '{assignment.BodyId}'.");
                 }
             }
 
