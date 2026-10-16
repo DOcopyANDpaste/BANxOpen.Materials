@@ -16,8 +16,9 @@ public sealed class SheetMetalLibraryRuleModule : IMaterialRuleModule
 
     /// <param name="sheetMetalLibraries">The configured list, normally from <see cref="SheetMetalLibraries.Load"/>.
     /// Omitted, the name-based default applies.</param>
-    public SheetMetalLibraryRuleModule(SheetMetalLibraries? sheetMetalLibraries = null) =>
-        ValidationRules = new IMaterialValidationRule[] { new BlockRestrictedBodyTypeRule(sheetMetalLibraries) };
+    /// <param name="text">Words the rule's outcome; <see cref="MaterialsText.Default"/> when null.</param>
+    public SheetMetalLibraryRuleModule(SheetMetalLibraries? sheetMetalLibraries = null, MaterialsText? text = null) =>
+        ValidationRules = new IMaterialValidationRule[] { new BlockRestrictedBodyTypeRule(sheetMetalLibraries, text) };
 
     public string ModuleId => Id;
 

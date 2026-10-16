@@ -8,12 +8,13 @@ public sealed class StandardRuleModule : IMaterialRuleModule
 {
     public const string Id = "STANDARD";
 
+    /// <param name="text">Words the rules' outcomes; <see cref="MaterialsText.Default"/> when null.</param>
+    public StandardRuleModule(MaterialsText? text = null) =>
+        ValidationRules = new IMaterialValidationRule[] { new RequireConfirmationOnReassignmentRule(text) };
+
     public string ModuleId => Id;
 
-    public IReadOnlyList<IMaterialValidationRule> ValidationRules { get; } = new IMaterialValidationRule[]
-    {
-        new RequireConfirmationOnReassignmentRule(),
-    };
+    public IReadOnlyList<IMaterialValidationRule> ValidationRules { get; }
 
     public IReadOnlyList<IFeatureMaterialConstraintProvider> FeatureConstraints => Array.Empty<IFeatureMaterialConstraintProvider>();
 

@@ -121,6 +121,9 @@ public class ValidateCoatingDisplayMaterialRuleTests
 
         Assert.Equal(RuleDecision.RequireConfirmation, outcome.Decision);
         Assert.Equal("COATING_DISPLAY_MISMATCH", outcome.ReasonCode);
+        Assert.Equal("Chrome", outcome.Args["libraryName"]);
+        Assert.Equal("Brushed Nickel", outcome.Args["currentName"]);
+        Assert.Equal("255,128,0", outcome.Args["currentRgb"]);
     }
 
     [Fact]

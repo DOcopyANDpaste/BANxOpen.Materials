@@ -1,3 +1,4 @@
+using BANxOpen.Materials.Core;
 using BANxOpen.Materials.Core.Assignment;
 using BANxOpen.Materials.Core.Bodies;
 using BANxOpen.Foundation.Contracts.Common;
@@ -19,20 +20,24 @@ public sealed class PartMaterialService : IPartMaterialService
     private readonly BodyResolver _bodyResolver;
     private readonly DisplayMaterialHelper _displayMaterialHelper;
     private readonly NxPhysicalMaterialSource _physicalMaterials;
+    private readonly MaterialsText _text;
     private readonly Dictionary<string, ISideEffectExecutor> _executors = new();
     private IReadOnlyList<BANxOpen.Materials.Contracts.MaterialLibrary> _resolutionLibraries = Array.Empty<BANxOpen.Materials.Contracts.MaterialLibrary>();
 
     /// <summary>Normally built by <see cref="MaterialEngine.Create"/>, which also checks that
     /// <paramref name="executors"/> covers every side effect the registered rules emit.</summary>
     /// <param name="executors">One executor per instruction type, display material sync included.</param>
+    /// <param name="text">Words the failures a tool shows; <see cref="MaterialsText.Default"/> when null.</param>
     public PartMaterialService(
         NxSessionContext context,
         IEnumerable<ISideEffectExecutor> executors,
         BodyResolver? bodyResolver = null,
         DisplayMaterialHelper? displayMaterialHelper = null,
-        NxPhysicalMaterialSource? physicalMaterials = null)
+        NxPhysicalMaterialSource? physicalMaterials = null,
+        MaterialsText? text = null)
     {
         _context = context;
+        _text = text ?? MaterialsText.Default;
         _bodyResolver = bodyResolver ?? new BodyResolver(context);
         _displayMaterialHelper = displayMaterialHelper ?? new DisplayMaterialHelper(context);
         _physicalMaterials = physicalMaterials ?? new NxPhysicalMaterialSource(context);
@@ -102,7 +107,7 @@ public sealed class PartMaterialService : IPartMaterialService
         catch (NXException ex)
         {
             _context.Log.Error($"Failed to resolve bodies before applying plan: NX {ex.ErrorCode}: {ex.Message}");
-            return OperationResult.Fail("APPLY_ABORTED", ex.Message);
+            return OperationResult.Fail(MaterialsCodes.ApplyAborted, _text.ApplyAborted(NxDialogText.Default.NxError(ex)));
         }
 
         var anyAttempted = false;
@@ -194,14 +199,14 @@ public sealed class PartMaterialService : IPartMaterialService
 
         // Left uncommitted on the abort path, so the plan-wide scope unwinds anything that did land.
         if (!anyAttempted && plan.Assignments.Count > 0)
-            return OperationResult.Fail("APPLY_ABORTED", "No target bodies in the plan could be resolved.");
+            return OperationResult.Fail(MaterialsCodes.ApplyAborted, _text.ApplyAborted(_text.NoTargetBodiesResolved));
 
         // A partial failure still commits: the bodies that succeeded are kept, exactly as before. What the
         // plan-wide scope adds is that undoing them afterwards is one step instead of one per body.
         planUndo.Commit();
 
         return anyFailed
-            ? OperationResult.Fail("PARTIAL_FAILURE", "One or more bodies failed during Apply; see the listing window for details.")
+            ? OperationResult.Fail(MaterialsCodes.PartialFailure, _text.PartialFailure)
             : OperationResult.Success();
     }
 
@@ -214,7 +219,7 @@ public sealed class PartMaterialService : IPartMaterialService
         catch (NXException ex)
         {
             _context.Log.Error($"Failed to resolve bodies before clearing: NX {ex.ErrorCode}: {ex.Message}");
-            return OperationResult.Fail("CLEAR_ABORTED", ex.Message);
+            return OperationResult.Fail(MaterialsCodes.ClearAborted, _text.ClearAborted(NxDialogText.Default.NxError(ex)));
         }
 
         var anyAttempted = false;
@@ -258,12 +263,12 @@ public sealed class PartMaterialService : IPartMaterialService
         }
 
         if (!anyAttempted && bodyIds.Count > 0)
-            return OperationResult.Fail("CLEAR_ABORTED", "No target bodies could be resolved.");
+            return OperationResult.Fail(MaterialsCodes.ClearAborted, _text.ClearAborted(_text.NoTargetBodiesResolved));
 
         clearUndo.Commit();
 
         return anyFailed
-            ? OperationResult.Fail("PARTIAL_FAILURE", "One or more bodies failed during Clear; see the listing window for details.")
+            ? OperationResult.Fail(MaterialsCodes.PartialFailure, _text.PartialFailure)
             : OperationResult.Success();
     }
 

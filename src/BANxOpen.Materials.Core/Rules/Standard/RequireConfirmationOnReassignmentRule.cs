@@ -7,6 +7,11 @@ namespace BANxOpen.Materials.Core.Rules.Standard;
 /// overwrite before it proceeds.</summary>
 public sealed class RequireConfirmationOnReassignmentRule : IMaterialValidationRule
 {
+    private readonly MaterialsText _text;
+
+    /// <param name="text">Words the outcome; <see cref="MaterialsText.Default"/> when null.</param>
+    public RequireConfirmationOnReassignmentRule(MaterialsText? text = null) => _text = text ?? MaterialsText.Default;
+
     public string RuleId => "CONFIRM_REASSIGNMENT";
 
     public int Order => MaterialRuleOrder.Validation.Confirmation;
@@ -21,8 +26,15 @@ public sealed class RequireConfirmationOnReassignmentRule : IMaterialValidationR
             ? new RuleOutcome(
                 RuleId,
                 RuleDecision.RequireConfirmation,
-                "REASSIGN",
-                $"Body already has '{currentMaterialName}'. Replace with '{context.RequestedMaterial.Name}'?")
+                MaterialsCodes.Reassign,
+                _text.Reassign(currentMaterialName!, context.RequestedMaterial.Name))
+            {
+                Args = new Dictionary<string, string>
+                {
+                    ["current"] = currentMaterialName!,
+                    ["requested"] = context.RequestedMaterial.Name,
+                },
+            }
             : new RuleOutcome(RuleId, RuleDecision.Allow, null, null);
     }
 }

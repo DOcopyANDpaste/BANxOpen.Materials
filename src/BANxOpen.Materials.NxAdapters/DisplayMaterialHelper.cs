@@ -1,3 +1,4 @@
+using BANxOpen.Materials.Core;
 using BANxOpen.Materials.Core.Assignment;
 using BANxOpen.Materials.Core.Rules.Display;
 using NXOpen;
@@ -42,7 +43,7 @@ public sealed class DisplayMaterialHelper : ISideEffectExecutor
         if (instruction.InstructionType != InstructionType)
         {
             return OperationResult.Fail(
-                "UNSUPPORTED_INSTRUCTION",
+                MaterialsCodes.UnsupportedInstruction,
                 $"{nameof(DisplayMaterialHelper)} cannot execute instruction type '{instruction.InstructionType}'.");
         }
 
@@ -54,7 +55,7 @@ public sealed class DisplayMaterialHelper : ISideEffectExecutor
             || string.IsNullOrWhiteSpace(name))
         {
             return OperationResult.Fail(
-                "MALFORMED_INSTRUCTION",
+                MaterialsCodes.MalformedInstruction,
                 $"'{SyncCoatingDisplayMaterialEffectRule.DisplayMaterialNameDataKey}' is missing or not a non-empty string.");
         }
 
@@ -62,7 +63,7 @@ public sealed class DisplayMaterialHelper : ISideEffectExecutor
             || rgbValue is not double[] { Length: 3 } rgb)
         {
             return OperationResult.Fail(
-                "MALFORMED_INSTRUCTION",
+                MaterialsCodes.MalformedInstruction,
                 $"'{SyncCoatingDisplayMaterialEffectRule.RgbDataKey}' is missing or not a double[3].");
         }
 

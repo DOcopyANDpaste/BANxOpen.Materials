@@ -36,4 +36,11 @@ public sealed record MaterialConstraint(
     string ReasonCode,
     Func<Material, bool> IsSatisfiedBy,
     Func<Material, string> DescribeViolation,
-    ConstraintSeverity Severity = ConstraintSeverity.Block);
+    ConstraintSeverity Severity = ConstraintSeverity.Block)
+{
+    /// <summary>The values <see cref="DescribeViolation"/> puts in its message, formatted for display and keyed by
+    /// name, for a front end that words the violation itself. They reach it as <c>RuleOutcome.Args</c>, together with
+    /// <c>source</c> and <c>material</c>, which <see cref="FeatureConstraintGateRule"/> adds. Null when the constraint
+    /// has nothing beyond those two.</summary>
+    public Func<Material, IReadOnlyDictionary<string, string>>? ViolationArgs { get; init; }
+}

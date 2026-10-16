@@ -18,9 +18,14 @@ namespace BANxOpen.Materials.Core.Rules.SheetMetal;
 public sealed class BlockRestrictedBodyTypeRule : IMaterialValidationRule
 {
     private readonly SheetMetalLibraries _sheetMetalLibraries;
+    private readonly MaterialsText _text;
 
-    public BlockRestrictedBodyTypeRule(SheetMetalLibraries? sheetMetalLibraries = null) =>
+    /// <param name="text">Words the outcome; <see cref="MaterialsText.Default"/> when null.</param>
+    public BlockRestrictedBodyTypeRule(SheetMetalLibraries? sheetMetalLibraries = null, MaterialsText? text = null)
+    {
         _sheetMetalLibraries = sheetMetalLibraries ?? SheetMetalLibraries.NameHeuristic;
+        _text = text ?? MaterialsText.Default;
+    }
 
     public string RuleId => "BLOCK_BODY_TYPE_RESTRICTION";
 
@@ -40,8 +45,11 @@ public sealed class BlockRestrictedBodyTypeRule : IMaterialValidationRule
             ? new RuleOutcome(
                 RuleId,
                 RuleDecision.Block,
-                "BODY_TYPE_RESTRICTED",
-                $"'{context.RequestedMaterial.Name}' is not available for this body.")
+                MaterialsCodes.BodyTypeRestricted,
+                _text.BodyTypeRestricted(context.RequestedMaterial.Name))
+            {
+                Args = new Dictionary<string, string> { ["material"] = context.RequestedMaterial.Name },
+            }
             : new RuleOutcome(RuleId, RuleDecision.Allow, null, null);
     }
 }

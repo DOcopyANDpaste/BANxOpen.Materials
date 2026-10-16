@@ -10,12 +10,13 @@ public sealed class DisplayMaterialRuleModule : IMaterialRuleModule
 {
     public const string Id = "DISPLAY";
 
+    /// <param name="text">Words the rules' outcomes; <see cref="MaterialsText.Default"/> when null.</param>
+    public DisplayMaterialRuleModule(MaterialsText? text = null) =>
+        ValidationRules = new IMaterialValidationRule[] { new ValidateCoatingDisplayMaterialRule(text) };
+
     public string ModuleId => Id;
 
-    public IReadOnlyList<IMaterialValidationRule> ValidationRules { get; } = new IMaterialValidationRule[]
-    {
-        new ValidateCoatingDisplayMaterialRule(),
-    };
+    public IReadOnlyList<IMaterialValidationRule> ValidationRules { get; }
 
     public IReadOnlyList<IFeatureMaterialConstraintProvider> FeatureConstraints => Array.Empty<IFeatureMaterialConstraintProvider>();
 

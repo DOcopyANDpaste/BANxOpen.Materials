@@ -1,5 +1,6 @@
 using NXOpen;
 using BANxOpen.Foundation.NxAdapters;
+using BANxOpen.Materials.Core;
 
 namespace BANxOpen.Materials.NxAdapters;
 
@@ -19,6 +20,7 @@ public sealed class NxPhysicalMaterialSource
 {
     private readonly NxSessionContext _context;
     private readonly Func<string, bool> _confirmLoad;
+    private readonly MaterialsText _text;
 
     /// <summary>Materials resolved this dialog session. Assigning one material to fifty bodies pays the
     /// library load once.</summary>
@@ -31,10 +33,12 @@ public sealed class NxPhysicalMaterialSource
     /// <param name="confirmLoad">Asks the user whether to run the slow load. Injected rather than calling a
     /// message box directly so this stays free of UI and remains testable; callers normally pass
     /// <c>NxMessageBoxHelper.Confirm</c>.</param>
-    public NxPhysicalMaterialSource(NxSessionContext context, Func<string, bool>? confirmLoad = null)
+    /// <param name="text">Words the load question; <see cref="MaterialsText.Default"/> when null.</param>
+    public NxPhysicalMaterialSource(NxSessionContext context, Func<string, bool>? confirmLoad = null, MaterialsText? text = null)
     {
         _context = context;
         _confirmLoad = confirmLoad ?? NxMessageBoxHelper.Confirm;
+        _text = text ?? MaterialsText.Default;
     }
 
     /// <summary>Starts a new apply. Clears the declined set — a decline should suppress re-prompting for the
@@ -64,10 +68,7 @@ public sealed class NxPhysicalMaterialSource
             return inPart;
         }
 
-        if (!_confirmLoad(
-                $"'{materialName}' is not in this part yet.{Environment.NewLine}" +
-                $"Load it from the NX material library '{libraryName}'?{Environment.NewLine}{Environment.NewLine}" +
-                "This can take a while for a large library."))
+        if (!_confirmLoad(_text.ConfirmLoadPhysicalMaterial(materialName, libraryName)))
         {
             _declined.Add(materialName);
             failureReason = $"Loading '{materialName}' from the NX library was declined.";

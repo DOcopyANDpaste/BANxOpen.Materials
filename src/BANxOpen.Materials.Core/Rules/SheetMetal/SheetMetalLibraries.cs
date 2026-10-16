@@ -32,13 +32,12 @@ public sealed class SheetMetalLibraries
     /// <summary>The name-based rule used when nothing is configured.</summary>
     public static SheetMetalLibraries NameHeuristic { get; } = new(null);
 
-    public static SheetMetalLibraries FromNames(IEnumerable<string> names)
+    /// <param name="text">Words the error; <see cref="MaterialsText.Default"/> when null.</param>
+    public static SheetMetalLibraries FromNames(IEnumerable<string> names, MaterialsText? text = null)
     {
         var list = names.Select(n => n.Trim()).Where(n => n.Length > 0).ToList();
         if (list.Count == 0)
-            throw new ArgumentException(
-                "sheetMetalLibraries must list at least one library; delete the file to use the name-based default instead.",
-                nameof(names));
+            throw new ArgumentException((text ?? MaterialsText.Default).LibraryRulesListEmpty, nameof(names));
 
         return new SheetMetalLibraries(list);
     }
@@ -64,9 +63,12 @@ public sealed class SheetMetalLibraries
     }
 
     /// <summary>Loads the rules file. Missing file → <see cref="NameHeuristic"/>. Present but invalid → error,
-    /// because silently falling back would ignore a restriction someone configured on purpose.</summary>
-    public static SheetMetalLibraries Load(string path)
+    /// because silently falling back would ignore a restriction someone configured on purpose. The error's message is
+    /// shown to the user at start-up, worded by <paramref name="text"/> (<see cref="MaterialsText.Default"/> when
+    /// null).</summary>
+    public static SheetMetalLibraries Load(string path, MaterialsText? text = null)
     {
+        text ??= MaterialsText.Default;
         if (!File.Exists(path))
             return NameHeuristic;
 
@@ -79,21 +81,19 @@ public sealed class SheetMetalLibraries
         }
         catch (JsonException ex)
         {
-            throw new InvalidDataException($"Material library rules at '{path}' are not valid JSON: {ex.Message}", ex);
+            throw new InvalidDataException(text.LibraryRulesInvalidJson(path, ex.Message), ex);
         }
 
         if (file?.SheetMetalLibraries is null)
-            throw new InvalidDataException(
-                $"Material library rules at '{path}' have no \"sheetMetalLibraries\" list. " +
-                "Add one, or delete the file to use the name-based default.");
+            throw new InvalidDataException(text.LibraryRulesMissingList(path));
 
         try
         {
-            return FromNames(file.SheetMetalLibraries);
+            return FromNames(file.SheetMetalLibraries, text);
         }
         catch (ArgumentException ex)
         {
-            throw new InvalidDataException($"Material library rules at '{path}': {ex.Message}", ex);
+            throw new InvalidDataException(text.LibraryRulesInvalid(path, ex.Message), ex);
         }
     }
 

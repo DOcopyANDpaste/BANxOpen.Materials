@@ -1,5 +1,6 @@
 using BANxOpen.Foundation.NxAdapters;
 using BANxOpen.Foundation.Contracts.Common;
+using BANxOpen.Materials.Core;
 using BANxOpen.Materials.Core.Bodies;
 using BANxOpen.Materials.Core.Rules;
 using BANxOpen.Materials.Core.Rules.SheetMetal;
@@ -16,12 +17,17 @@ namespace BANxOpen.Materials.NxAdapters;
 /// a defect in the tool that the first launch should expose rather than a dialog that runs with a rule missing.</summary>
 public sealed class MaterialEngine
 {
-    private MaterialEngine(MaterialRuleSet rules, IPartMaterialService partMaterials, SheetMetalLibraries sheetMetalLibraries)
+    private MaterialEngine(
+        MaterialRuleSet rules, IPartMaterialService partMaterials, SheetMetalLibraries sheetMetalLibraries, MaterialsText text)
     {
         Rules = rules;
         PartMaterials = partMaterials;
         SheetMetalLibraries = sheetMetalLibraries;
+        Text = text;
     }
+
+    /// <summary>The describer every rule and service of this engine words its messages with.</summary>
+    public MaterialsText Text { get; }
 
     public MaterialRuleSet Rules { get; }
 
@@ -32,32 +38,37 @@ public sealed class MaterialEngine
     public SheetMetalLibraries SheetMetalLibraries { get; }
 
     /// <param name="libraryRootDirectory">The material library folder, where the library rules file is looked for.</param>
-    /// <param name="domainModules">The feature domains' modules, e.g. <c>SheetMetalServices.MaterialModules</c>.</param>
+    /// <param name="domainModules">The feature domains' modules, e.g. <c>SheetMetalServices.MaterialModules</c>. They
+    /// word their own messages with their own describer.</param>
+    /// <param name="text">Words the engine's messages; <see cref="MaterialsText.Default"/> when null.</param>
     public static OperationResult<MaterialEngine> Create(
         NxSessionContext context,
         BodyResolver bodyResolver,
         string libraryRootDirectory,
-        IEnumerable<INxMaterialRuleModule> domainModules)
+        IEnumerable<INxMaterialRuleModule> domainModules,
+        MaterialsText? text = null)
     {
+        text ??= MaterialsText.Default;
+
         // A broken rules file stops the caller rather than being ignored: silently falling back to the name-based
         // default would drop a restriction someone configured on purpose.
         var libraryRulesPath = SheetMetalLibraries.ResolvePath(libraryRootDirectory);
         SheetMetalLibraries sheetMetalLibraries;
         try
         {
-            sheetMetalLibraries = SheetMetalLibraries.Load(libraryRulesPath);
+            sheetMetalLibraries = SheetMetalLibraries.Load(libraryRulesPath, text);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
             context.Log.Error($"Material library rules could not be loaded: {ex.Message}");
-            return OperationResult<MaterialEngine>.Fail("MATERIAL_RULES_UNAVAILABLE", ex.Message);
+            return OperationResult<MaterialEngine>.Fail(MaterialsCodes.MaterialRulesUnavailable, text.MaterialRulesUnavailable(ex.Message));
         }
 
         if (!sheetMetalLibraries.IsConfigured)
             context.Log.Info($"No {SheetMetalLibraries.FileName} at '{libraryRulesPath}'; sheet metal libraries are recognised by name.");
 
         var domains = domainModules.ToList();
-        var rules = MaterialRuleSet.From(MaterialRuleSet.Baseline(sheetMetalLibraries).Concat<IMaterialRuleModule>(domains));
+        var rules = MaterialRuleSet.From(MaterialRuleSet.Baseline(sheetMetalLibraries, text).Concat<IMaterialRuleModule>(domains), text);
 
         // Display material sync is a baseline side effect, so its executor is the one this layer owns.
         var displayMaterialHelper = new DisplayMaterialHelper(context);
@@ -67,9 +78,9 @@ public sealed class MaterialEngine
 
         // Owns the only path that touches NX's own material library, which is slow — see the class doc for why that
         // happens lazily, per material, and only after asking.
-        var physicalMaterials = new NxPhysicalMaterialSource(context);
-        var partMaterials = new PartMaterialService(context, executors, bodyResolver, displayMaterialHelper, physicalMaterials);
+        var physicalMaterials = new NxPhysicalMaterialSource(context, null, text);
+        var partMaterials = new PartMaterialService(context, executors, bodyResolver, displayMaterialHelper, physicalMaterials, text);
 
-        return OperationResult<MaterialEngine>.Success(new MaterialEngine(rules, partMaterials, sheetMetalLibraries));
+        return OperationResult<MaterialEngine>.Success(new MaterialEngine(rules, partMaterials, sheetMetalLibraries, text));
     }
 }

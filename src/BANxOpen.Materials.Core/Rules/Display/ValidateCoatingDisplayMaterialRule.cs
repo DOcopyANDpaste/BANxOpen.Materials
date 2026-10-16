@@ -26,6 +26,11 @@ namespace BANxOpen.Materials.Core.Rules.Display;
 /// </list></summary>
 public sealed class ValidateCoatingDisplayMaterialRule : IMaterialValidationRule
 {
+    private readonly MaterialsText _text;
+
+    /// <param name="text">Words the outcomes; <see cref="MaterialsText.Default"/> when null.</param>
+    public ValidateCoatingDisplayMaterialRule(MaterialsText? text = null) => _text = text ?? MaterialsText.Default;
+
     public string RuleId => "VALIDATE_COATING_DISPLAY_MATERIAL";
 
     public int Order => MaterialRuleOrder.Validation.Appearance;
@@ -40,8 +45,15 @@ public sealed class ValidateCoatingDisplayMaterialRule : IMaterialValidationRule
             return new RuleOutcome(
                 RuleId,
                 RuleDecision.Warn,
-                "COATING_NAME_MISSING",
-                $"Material '{material.Name}' has no {CoatingPropertyReader.MaterialNamePropertyName} defined — a default display material will be applied instead.");
+                MaterialsCodes.CoatingNameMissing,
+                _text.CoatingNameMissing(material.Name, CoatingPropertyReader.MaterialNamePropertyName))
+            {
+                Args = new Dictionary<string, string>
+                {
+                    ["material"] = material.Name,
+                    ["property"] = CoatingPropertyReader.MaterialNamePropertyName,
+                },
+            };
         }
 
         if (!CoatingPropertyReader.TryGetRgb(material, out var r, out var g, out var b))
@@ -49,8 +61,15 @@ public sealed class ValidateCoatingDisplayMaterialRule : IMaterialValidationRule
             return new RuleOutcome(
                 RuleId,
                 RuleDecision.Block,
-                "COATING_COLOR_INVALID",
-                $"Material '{material.Name}' has an invalid or missing {CoatingPropertyReader.ColorPropertyName}. Contact your material library administrator.");
+                MaterialsCodes.CoatingColorInvalid,
+                _text.CoatingColorInvalid(material.Name, CoatingPropertyReader.ColorPropertyName))
+            {
+                Args = new Dictionary<string, string>
+                {
+                    ["material"] = material.Name,
+                    ["property"] = CoatingPropertyReader.ColorPropertyName,
+                },
+            };
         }
 
         if (context.CurrentAssignment is not null)
@@ -62,8 +81,11 @@ public sealed class ValidateCoatingDisplayMaterialRule : IMaterialValidationRule
                 return new RuleOutcome(
                     RuleId,
                     RuleDecision.Allow,
-                    "COATING_NOT_APPLIED",
-                    $"Body already has material '{context.CurrentAssignment.MaterialName}' assigned but no display material is currently associated with it — it will be assigned automatically.");
+                    MaterialsCodes.CoatingNotApplied,
+                    _text.CoatingNotApplied(context.CurrentAssignment.MaterialName))
+                {
+                    Args = new Dictionary<string, string> { ["current"] = context.CurrentAssignment.MaterialName ?? string.Empty },
+                };
             }
 
             var nameMatches = string.Equals(displayMaterialName, currentDisplayMaterial.Name, StringComparison.OrdinalIgnoreCase);
@@ -77,8 +99,17 @@ public sealed class ValidateCoatingDisplayMaterialRule : IMaterialValidationRule
                 return new RuleOutcome(
                     RuleId,
                     RuleDecision.RequireConfirmation,
-                    "COATING_DISPLAY_MISMATCH",
-                    $"Library: '{displayMaterialName}' ({libraryRgb}) vs current: '{currentDisplayMaterial.Name}' ({currentRgb}).\nConfirm to update to the library value, or leave unconfirmed to keep the current one.");
+                    MaterialsCodes.CoatingDisplayMismatch,
+                    _text.CoatingDisplayMismatch(displayMaterialName, libraryRgb, currentDisplayMaterial.Name, currentRgb))
+                {
+                    Args = new Dictionary<string, string>
+                    {
+                        ["libraryName"] = displayMaterialName,
+                        ["libraryRgb"] = libraryRgb,
+                        ["currentName"] = currentDisplayMaterial.Name,
+                        ["currentRgb"] = currentRgb,
+                    },
+                };
             }
         }
 

@@ -157,6 +157,37 @@ public class FeatureConstraintGateRuleTests
     }
 
     [Fact]
+    public void Every_warning_is_also_kept_as_its_own_inner_outcome()
+    {
+        var rule = new FeatureConstraintGateRule(
+            new FakeConstraintProvider(
+                "BEAD",
+                WarnAlways("Bead(12)", "BEAD_UNMATCHED", "first advisory"),
+                WarnAlways("Bead(13)", "BEAD_OTHER", "second advisory")));
+
+        var outcome = rule.Evaluate(Context("2024-O"));
+
+        Assert.Equal(new[] { "BEAD_UNMATCHED", "BEAD_OTHER" }, outcome.Inner.Select(o => o.ReasonCode));
+        Assert.Equal("Bead(13)", outcome.Inner[1].Args["source"]);
+    }
+
+    [Fact]
+    public void A_block_carries_the_constraints_args_with_its_source_and_the_material()
+    {
+        var constraint = AllowOnly("Bead SPEC BA-1234", "NOT_ALLOWED", "2024-O") with
+        {
+            ViolationArgs = _ => new Dictionary<string, string> { ["spec"] = "BA-1234" },
+        };
+        var rule = new FeatureConstraintGateRule(new FakeConstraintProvider("BEAD", constraint));
+
+        var outcome = rule.Evaluate(Context("7075-T6"));
+
+        Assert.Equal("BA-1234", outcome.Args["spec"]);
+        Assert.Equal("Bead SPEC BA-1234", outcome.Args["source"]);
+        Assert.Equal("7075-T6", outcome.Args["material"]);
+    }
+
+    [Fact]
     public void Queries_providers_for_the_body_under_evaluation()
     {
         var provider = new FakeConstraintProvider("BEAD");

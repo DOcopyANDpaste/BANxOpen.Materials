@@ -18,11 +18,11 @@ namespace BANxOpen.Materials.Core.Rules;
 /// refusal from one domain still beats a warning from another, and every warning is shown at once.</summary>
 public sealed class MaterialRuleSet
 {
-    private MaterialRuleSet(IReadOnlyList<IMaterialRuleModule> modules)
+    private MaterialRuleSet(IReadOnlyList<IMaterialRuleModule> modules, MaterialsText? text)
     {
         Modules = modules;
         ValidationRules = modules.SelectMany(m => m.ValidationRules)
-            .Append(new FeatureConstraintGateRule(modules.SelectMany(m => m.FeatureConstraints)))
+            .Append(new FeatureConstraintGateRule(modules.SelectMany(m => m.FeatureConstraints), text))
             .OrderBy(r => r.Order)
             .ToList();
         SideEffectRules = modules.SelectMany(m => m.SideEffectRules).OrderBy(r => r.Order).ToList();
@@ -30,17 +30,20 @@ public sealed class MaterialRuleSet
 
     /// <summary>The modules every entry point starts from: standard rules, display material, and the sheet metal
     /// library restriction. <paramref name="sheetMetalLibraries"/> is normally loaded with
-    /// <see cref="SheetMetalLibraries.Load"/>; omitted, the name-based default applies.</summary>
-    public static IReadOnlyList<IMaterialRuleModule> Baseline(SheetMetalLibraries? sheetMetalLibraries = null) =>
+    /// <see cref="SheetMetalLibraries.Load"/>; omitted, the name-based default applies. <paramref name="text"/> words
+    /// their outcomes; <see cref="MaterialsText.Default"/> when null.</summary>
+    public static IReadOnlyList<IMaterialRuleModule> Baseline(SheetMetalLibraries? sheetMetalLibraries = null, MaterialsText? text = null) =>
         new IMaterialRuleModule[]
         {
-            new StandardRuleModule(),
-            new DisplayMaterialRuleModule(),
-            new SheetMetalLibraryRuleModule(sheetMetalLibraries),
+            new StandardRuleModule(text),
+            new DisplayMaterialRuleModule(text),
+            new SheetMetalLibraryRuleModule(sheetMetalLibraries, text),
         };
 
+    /// <param name="text">Words the feature constraint gate's outcomes; <see cref="MaterialsText.Default"/> when null.
+    /// The modules word their own rules' outcomes.</param>
     /// <exception cref="ArgumentException">A module id, or a rule id, is registered more than once.</exception>
-    public static MaterialRuleSet From(IEnumerable<IMaterialRuleModule> modules)
+    public static MaterialRuleSet From(IEnumerable<IMaterialRuleModule> modules, MaterialsText? text = null)
     {
         var list = modules.ToList();
 
@@ -72,7 +75,7 @@ public sealed class MaterialRuleSet
             }
         }
 
-        return new MaterialRuleSet(list);
+        return new MaterialRuleSet(list, text);
     }
 
     public IReadOnlyList<IMaterialRuleModule> Modules { get; }
