@@ -201,6 +201,9 @@ public sealed class PartMaterialService : IPartMaterialService
         if (!anyAttempted && plan.Assignments.Count > 0)
             return OperationResult.Fail(MaterialsCodes.ApplyAborted, _text.ApplyAborted(_text.NoTargetBodiesResolved));
 
+        if (anyAttempted)
+            UpdateExpressionsForExternalChange("apply");
+
         // A partial failure still commits: the bodies that succeeded are kept, exactly as before. What the
         // plan-wide scope adds is that undoing them afterwards is one step instead of one per body.
         planUndo.Commit();
@@ -264,6 +267,9 @@ public sealed class PartMaterialService : IPartMaterialService
 
         if (!anyAttempted && bodyIds.Count > 0)
             return OperationResult.Fail(MaterialsCodes.ClearAborted, _text.ClearAborted(_text.NoTargetBodiesResolved));
+
+        if (anyAttempted)
+            UpdateExpressionsForExternalChange("clear");
 
         clearUndo.Commit();
 
@@ -430,6 +436,23 @@ public sealed class PartMaterialService : IPartMaterialService
         uf.Disp.AskColor(body.Color, UFConstants.UF_DISP_rgb_model, out _, rgb);
 
         return ((byte)Math.Round(rgb[0] * 255), (byte)Math.Round(rgb[1] * 255), (byte)Math.Round(rgb[2] * 255));
+    }
+
+    /// <summary>Tools > Update > Update for External Change. Expressions that read material properties
+    /// (density, mass) do not refresh on their own when a physical material is assigned or removed, so this
+    /// runs once after every apply or clear that touched a body. It sits inside the caller's undo scope so the
+    /// refresh comes back out with the same Ctrl+Z. A failure is logged rather than failing the gesture: the
+    /// material changes themselves have already landed.</summary>
+    private void UpdateExpressionsForExternalChange(string operation)
+    {
+        try
+        {
+            _context.WorkPart.Expressions.UpdateForExternalChange();
+        }
+        catch (NXException ex)
+        {
+            _context.Log.Error($"Update for external change after {operation} failed: NX {ex.ErrorCode}: {ex.Message}");
+        }
     }
 
     private static void WritePhysicalMaterial(PhysicalMaterial material, Body body) =>
